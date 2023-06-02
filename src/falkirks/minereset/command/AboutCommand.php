@@ -2,18 +2,19 @@
 
 namespace falkirks\minereset\command;
 
-
-use falkirks\minereset\task\AboutPullTask;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat;
 
-class AboutCommand extends SubCommand{
-    public function execute(CommandSender $sender, $commandLabel, array $args){
-        if($sender->hasPermission("minereset.command.about")) {
-            $this->getApi()->getServer()->getAsyncPool()->submitTask(new AboutPullTask($sender));
-        }
-        else{
-            $sender->sendMessage(TextFormat::RED . "You do not have permission to run this command." . TextFormat::RESET);
-        }
-    }
+class AboutCommand extends SubCommand
+{
+	public function execute(CommandSender $sender, $commandLabel, array $args): bool {
+		if ($sender->hasPermission("minereset.command.about")) {
+			$sender->sendMessage(TextFormat::GREEN . "MineReset 4.0 by Falk, updated by Octopush.");
+			$sender->sendMessage(TextFormat::GREEN . "Github: https://github.com/octopussh");
+			$sender->sendMessage(TextFormat::GREEN . "Github: https://github.com/fernanACM");
+		} else {
+			$sender->sendMessage(TextFormat::RED . "You do not have permission to run this command." . TextFormat::RESET);
+		}
+		return true;
+	}
 }

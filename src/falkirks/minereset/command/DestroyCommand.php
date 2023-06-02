@@ -1,14 +1,16 @@
 <?php
+
 namespace falkirks\minereset\command;
 
 
+use falkirks\minereset\libs\forms\ModalForm;
 use falkirks\minereset\MineReset;
-use Frago9876543210\EasyForms\forms\ModalForm;
 use pocketmine\command\CommandSender;
-use pocketmine\Player;
+use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 
-class DestroyCommand extends SubCommand{
+class DestroyCommand extends SubCommand
+{
 
     const DESTROY_STRINGS = [
         "a",
@@ -23,35 +25,32 @@ class DestroyCommand extends SubCommand{
         "y"
     ];
 
-    private $offset;
-    private $senders;
+    private int $offset;
+    private array $senders;
 
-    public function __construct(MineReset $mineReset){
+    public function __construct(MineReset $mineReset) {
         parent::__construct($mineReset);
         $this->offset = 0;
         $this->senders = [];
     }
 
-    public function doDelete(CommandSender $sender, $name){
+    public function doDelete(CommandSender $sender, string $name): void {
         unset($this->getApi()->getMineManager()[$name]);
         unset($this->senders[$sender->getName()]);
-        $sender->sendMessage("{$name[0]} has been destroyed.");
+        $sender->sendMessage("$name[0] has been destroyed.");
     }
 
-    private function formDelete(CommandSender $sender, $name){
-        $form = new class("Are you sure?", "You are about to delete the mine called $name.") extends ModalForm {
-            public function onSubmit(Player $player, $response) : void{
-                if($response){
-                    $this->parent->doDelete($player, $this->name);
+    private function formDelete(Player $sender, string $name): void {
+        $form = new ModalForm("Are you sure?", "You are about to delete the mine called $name.",
+            function (Player $player, bool $response) use ($name): void {
+                if ($response) {
+                    $this->doDelete($player, $name);
                 }
-            }
-        };
-        $form->parent = $this;
-        $form->name = $name;
+            });
         $sender->sendForm($form);
     }
 
-    private function basicDelete(CommandSender $sender, $name){
+    private function basicDelete(CommandSender $sender, string $name): void {
         $str = DestroyCommand::DESTROY_STRINGS[$this->offset];
         $sender->sendMessage("Run: " . TextFormat::AQUA . "/mine destroy $name $str" . TextFormat::RESET);
         $sender->sendMessage("To destroy mines faster, you can edit the config file directly.");
@@ -65,22 +64,27 @@ class DestroyCommand extends SubCommand{
     }
 
 
-    public function execute(CommandSender $sender, $commandLabel, array $args){
-        if(!$sender->hasPermission("minereset.command.destroy"))
-            return $sender->sendMessage(TextFormat::RED . "You do not have permission to run this command." . TextFormat::RESET);
+    public function execute(CommandSender $sender, $commandLabel, array $args): bool {
+        if (!$sender->hasPermission("minereset.command.destroy")) {
+            $sender->sendMessage(TextFormat::RED . "You do not have permission to run this command." . TextFormat::RESET);
+            return false;
+        }
 
-        if (!isset($args[0]))
-            return $sender->sendMessage("Usage: /mine destroy <name>");
+        if (!isset($args[0])) {
+            $sender->sendMessage("Usage: /mine destroy <name>");
+            return false;
+        }
 
         $name = $args[0];
 
-        if(!isset($this->getApi()->getMineManager()[$name]))
-            return $sender->sendMessage("{$args[0]} is not a valid mine.");
-
-        if($sender instanceof Player && $this->formsSupported()){
-            $this->formDelete($sender, $name);
+        if (!isset($this->getApi()->getMineManager()[$name])) {
+            $sender->sendMessage("$args[0] is not a valid mine.");
+            return false;
         }
-        else if (isset($args[1]) && isset($this->senders[$sender->getName()]) && $this->senders[$sender->getName()] === $args[1]) {
+
+        if ($sender instanceof Player) {
+            $this->formDelete($sender, $name);
+        } else if (isset($args[1]) && isset($this->senders[$sender->getName()]) && $this->senders[$sender->getName()] === $args[1]) {
             $this->doDelete($sender, $name);
         } else {
             $this->basicDelete($sender, $name);
